@@ -1,0 +1,5 @@
+{
+  "name": "Công Cụ Đồng Nhất prompt và hình ảnh và video cho veo 3 V02",
+  "description": "An application to generate dynamic prompts for each video scene based on user-input scripts. It ensures the main character remains consistent throughout the video by defining a 'Character DNA' and allows users to select video style, duration, and mood to generate tailored prompts for AI video creation.",
+  "requestFramePermissions": []
+}
