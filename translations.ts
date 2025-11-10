@@ -333,19 +333,19 @@ const en: TranslationKeys = {
   errorModelOverloaded: "The AI model is currently overloaded. Please try again in a few moments.",
   promptHelperTitle: "Prompt Helper (Click to add)",
   promptHelperTags: {
-    cam: { group: "🎥 [CAM] – Camera & Composition", tags: [{ tag: "[CAM]: \n", desc: "Angle, lens, composition, movement" }] },
-    subj: { group: "👩 [SUBJ] – Human Subject", tags: [{ tag: "[SUBJ]: \n", desc: "Character / pose / expression" }] },
-    char: { group: "💇 [CHAR] – Character Appearance", tags: [{ tag: "[CHAR]: \n", desc: "Detailed appearance" }] },
-    set: { group: "🏠 [SET] – Setting / Environment", tags: [{ tag: "[SET]: \n", desc: "Environment, background" }] },
-    mood: { group: "💫 [MOOD] – Emotion & Atmosphere", tags: [{ tag: "[MOOD]: \n", desc: "Emotion and atmosphere" }] },
-    fx: { group: "✨ [FX] – Effects & Light Behavior", tags: [{ tag: "[FX]: \n", desc: "Effects and lighting" }] },
-    clr: { group: "🎨 [CLR] – Color Palette", tags: [{ tag: "[CLR]: \n", desc: "Color palette" }] },
-    snd: { group: "🔊 [SND] – Sound Design", tags: [{ tag: "[SND]: \n", desc: "Sound design" }] },
-    edit: { group: "🧰 [EDIT] – Post-processing & Avoids", tags: [{ tag: "[EDIT]: \n", desc: "Post-processing and elements to avoid" }] },
-    rndr: { group: "🖥️ [RNDR] – Render Engine & Quality", tags: [{ tag: "[RNDR]: \n", desc: "Render engine and quality" }] },
-    sty: { group: "🎭 [STY] – Artistic Style & Genre", tags: [{ tag: "[STY]: \n", desc: "Artistic style and genre" }] },
-    tim: { group: "⏱️ [TIM] – Timing / Duration / Transition", tags: [{ tag: "[TIM]: \n", desc: "Timing and transitions" }] },
-    focal: { group: "🎯 !FOCAL – Focal Point", tags: [{ tag: "!FOCAL: \n", desc: "Main focal point" }] },
+    cam: { group: "[CAM] – Camera & Composition", tags: [{ tag: "[CAM]: ", desc: "Angle, lens, composition, movement" }] },
+    subj: { group: "[SUBJ] – Human Subject", tags: [{ tag: "[SUBJ]: ", desc: "Character / pose / expression" }] },
+    char: { group: "[CHAR] – Character Appearance", tags: [{ tag: "[CHAR]: ", desc: "Detailed appearance" }] },
+    set: { group: "[SET] – Setting / Environment", tags: [{ tag: "[SET]: ", desc: "Environment, background" }] },
+    mood: { group: "[MOOD] – Emotion & Atmosphere", tags: [{ tag: "[MOOD]: ", desc: "Emotion and atmosphere" }] },
+    fx: { group: "[FX] – Effects & Light Behavior", tags: [{ tag: "[FX]: ", desc: "Effects and lighting" }] },
+    clr: { group: "[CLR] – Color Palette", tags: [{ tag: "[CLR]: ", desc: "Color palette" }] },
+    snd: { group: "[SND] – Sound Design", tags: [{ tag: "[SND]: ", desc: "Sound design" }] },
+    edit: { group: "[EDIT] – Post-processing & Avoids", tags: [{ tag: "[EDIT]: ", desc: "Post-processing and elements to avoid" }] },
+    rndr: { group: "[RNDR] – Render Engine & Quality", tags: [{ tag: "[RNDR]: ", desc: "Render engine and quality" }] },
+    sty: { group: "[STY] – Artistic Style & Genre", tags: [{ tag: "[STY]: ", desc: "Artistic style and genre" }] },
+    tim: { group: "[TIM] – Timing / Duration / Transition", tags: [{ tag: "[TIM]: ", desc: "Timing and transitions" }] },
+    focal: { group: "!FOCAL – Focal Point", tags: [{ tag: "!FOCAL: ", desc: "Main focal point" }] },
   },
   systemInstruction_generateStoryIdea: (style) => `You are a creative assistant. Generate a short, single-paragraph story idea suitable for a short video. The story should be interesting and visually compelling. The desired visual style is "${style}". Keep the idea concise and focused. The language of the response must be the same as the user's prompt. IMPORTANT: You must strictly adhere to safety policies. Do not generate content that is sexually explicit, depicts violence, promotes illegal acts, involves minors, or other sensitive topics.`,
   systemInstruction_generateScript: (config) => `You are a scriptwriter. Based on the provided story idea, characters, and video configuration, write a complete script. The script should be suitable for a video of approximately ${config.duration} seconds.
@@ -367,30 +367,38 @@ ${isContinuation ? "5. **Continuation Task:** You have already generated some sc
     const imagePromptInstruction = `
 **PROMPT TYPE: IMAGE**
 *   **Goal:** Each prompt will be used to generate a single, high-quality **keyframe image** representing that scene.
-*   **Prompt Structure:** The \`prompt\` string MUST be constructed by joining the following tags, with each tag on a new line. The prompt must be in English and focus on static visual elements.
+*   **Prompt Structure:** The \`prompt\` string MUST be a single, continuous line of text in English. It MUST be constructed by joining the following tags, separated by a comma and a space. Do NOT use newlines or icons.
 
-**DETAILED PROMPT STRUCTURE (Each tag on a new line):**
-*   **🎥 [CAM]:** Describe the camera angle, lens, composition, and movement. Always include the aspect ratio: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
-*   **👩 [SUBJ]:** Describe the human subject in the scene: ethnicity, gender, age, body type, pose, and expression.
-*   **💇 [CHAR]:** Describe the character's detailed appearance: hair, skin, outfit.
-*   **🏠 [SET]:** Describe the setting: location, background, environmental lighting, and props.
-*   **💫 [MOOD]:** Describe the scene's emotion and atmosphere: theme, character mood, and emotional color tone.
-*   **✨ [FX]:** Describe effects and light behavior: main lighting style, glow/reflections, and grain.
-*   **🎨 [CLR]:** Describe the color palette: key colors and color balance.
-*   **🧰 [EDIT]:** Describe post-processing and elements to avoid.
-*   **🖥️ [RNDR]:** Describe the render quality.
-*   **🎭 [STY]:** Describe the artistic style and genre. Always include the main style: **${config.style}**.
-*   **🎯 !FOCAL:** Describe the AI's main focal point.`;
+**DETAILED PROMPT STRUCTURE (Join with ", "):**
+*   **[CAM]:** Describe the camera angle, lens, composition. Always include the aspect ratio: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
+*   **[SUBJ]:** Describe the human subject in the scene: ethnicity, gender, age, body type, pose, and expression.
+*   **[CHAR]:** Describe the character's detailed appearance: hair, skin, outfit.
+*   **[SET]:** Describe the setting: location, background, environmental lighting, and props.
+*   **[MOOD]:** Describe the scene's emotion and atmosphere: theme, character mood, and emotional color tone.
+*   **[FX]:** Describe effects and light behavior: main lighting style, glow/reflections, and grain.
+*   **[CLR]:** Describe the color palette: key colors and color balance.
+*   **[EDIT]:** Describe post-processing and elements to avoid.
+*   **[RNDR]:** Describe the render quality.
+*   **[STY]:** Describe the artistic style and genre. Always include the main style: **${config.style}**.
+*   **!FOCAL:** Describe the AI's main focal point.`;
 
     const videoPromptInstruction = `
 **PROMPT TYPE: VIDEO**
-*   **Goal:** Each prompt will be used to generate a short **video clip** for that scene.
-*   **Prompt Structure:** For the \`prompt\` field, write a single descriptive paragraph in English. This paragraph must be a complete, cinematic shot description.
-*   **Content:** The prompt should vividly describe:
-    *   **Action:** What are the characters doing? What is happening in the scene?
-    *   **Movement:** Describe character actions (e.g., "walking slowly", "glances over her shoulder") and camera movement (e.g., "slow pan left", "dynamic handheld shot following the character", "crane shot revealing the city").
-    *   **Atmosphere:** Include details about lighting, weather, and mood to create a rich, cinematic feel.
-    *   **Do not use the tag-based structure like [CAM], [SUBJ] etc. for video prompts.**`;
+*   **Goal:** Each prompt will be used to generate a short, high-quality **video clip** representing that scene.
+*   **Prompt Structure:** The \`prompt\` string MUST be a single, continuous line of text in English. It MUST be constructed by joining the following tags, separated by a comma and a space, and it must describe a complete cinematic shot, **including movement and action**. Do NOT use newlines or icons.
+
+**DETAILED PROMPT STRUCTURE (Join with ", "):**
+*   **[CAM]:** Describe the camera angle, lens, composition, and **camera movement (e.g., slow pan, dolly in)**. Always include the aspect ratio: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
+*   **[SUBJ]:** Describe the human subject's **actions, pose, and expression** during the scene.
+*   **[CHAR]:** Describe the character's detailed appearance: hair, skin, outfit.
+*   **[SET]:** Describe the setting: location, background, environmental lighting, and props.
+*   **[MOOD]:** Describe the scene's emotion and atmosphere: theme, character mood, and emotional color tone.
+*   **[FX]:** Describe effects and light behavior: main lighting style, glow/reflections, and grain.
+*   **[CLR]:** Describe the color palette: key colors and color balance.
+*   **[EDIT]:** Describe post-processing and elements to avoid.
+*   **[RNDR]:** Describe the render quality.
+*   **[STY]:** Describe the artistic style and genre. Always include the main style: **${config.style}**.
+*   **!FOCAL:** Describe the main focal point of the shot and any action associated with it.`;
 
     return `${commonRules}\n\n${promptType === 'image' ? imagePromptInstruction : videoPromptInstruction}`;
   },
@@ -609,19 +617,19 @@ const vi: TranslationKeys = {
   errorModelOverloaded: "Model AI hiện đang quá tải. Vui lòng thử lại sau giây lát.",
   promptHelperTitle: "Hỗ trợ Prompt (Nhấp để thêm)",
   promptHelperTags: {
-    cam: { group: "🎥 [CAM] – Camera & Composition", tags: [{ tag: "[CAM]: \n", desc: "Góc máy, ống kính, bố cục, chuyển động" }] },
-    subj: { group: "👩 [SUBJ] – Human Subject", tags: [{ tag: "[SUBJ]: \n", desc: "Nhân vật / dáng / biểu cảm" }] },
-    char: { group: "💇 [CHAR] – Character Appearance", tags: [{ tag: "[CHAR]: \n", desc: "Ngoại hình chi tiết" }] },
-    set: { group: "🏠 [SET] – Setting / Environment", tags: [{ tag: "[SET]: \n", desc: "Môi trường, bối cảnh" }] },
-    mood: { group: "💫 [MOOD] – Emotion & Atmosphere", tags: [{ tag: "[MOOD]: \n", desc: "Cảm xúc và không khí" }] },
-    fx: { group: "✨ [FX] – Effects & Light Behavior", tags: [{ tag: "[FX]: \n", desc: "Hiệu ứng và ánh sáng" }] },
-    clr: { group: "🎨 [CLR] – Color Palette", tags: [{ tag: "[CLR]: \n", desc: "Bảng màu" }] },
-    snd: { group: "🔊 [SND] – Sound Design", tags: [{ tag: "[SND]: \n", desc: "Thiết kế âm thanh" }] },
-    edit: { group: "🧰 [EDIT] – Post-processing & Avoids", tags: [{ tag: "[EDIT]: \n", desc: "Hậu kỳ và các yếu tố cần tránh" }] },
-    rndr: { group: "🖥️ [RNDR] – Render Engine & Quality", tags: [{ tag: "[RNDR]: \n", desc: "Công cụ render và chất lượng" }] },
-    sty: { group: "🎭 [STY] – Artistic Style & Genre", tags: [{ tag: "[STY]: \n", desc: "Phong cách nghệ thuật và thể loại" }] },
-    tim: { group: "⏱️ [TIM] – Timing / Duration / Transition", tags: [{ tag: "[TIM]: \n", desc: "Thời gian và chuyển cảnh" }] },
-    focal: { group: "🎯 !FOCAL – Focal Point", tags: [{ tag: "!FOCAL: \n", desc: "Điểm lấy nét chính" }] },
+    cam: { group: "[CAM] – Camera & Composition", tags: [{ tag: "[CAM]: ", desc: "Góc máy, ống kính, bố cục, chuyển động" }] },
+    subj: { group: "[SUBJ] – Human Subject", tags: [{ tag: "[SUBJ]: ", desc: "Nhân vật / dáng / biểu cảm" }] },
+    char: { group: "[CHAR] – Character Appearance", tags: [{ tag: "[CHAR]: ", desc: "Ngoại hình chi tiết" }] },
+    set: { group: "[SET] – Setting / Environment", tags: [{ tag: "[SET]: ", desc: "Môi trường, bối cảnh" }] },
+    mood: { group: "[MOOD] – Emotion & Atmosphere", tags: [{ tag: "[MOOD]: ", desc: "Cảm xúc và không khí" }] },
+    fx: { group: "[FX] – Effects & Light Behavior", tags: [{ tag: "[FX]: ", desc: "Hiệu ứng và ánh sáng" }] },
+    clr: { group: "[CLR] – Color Palette", tags: [{ tag: "[CLR]: ", desc: "Bảng màu" }] },
+    snd: { group: "[SND] – Sound Design", tags: [{ tag: "[SND]: ", desc: "Thiết kế âm thanh" }] },
+    edit: { group: "[EDIT] – Post-processing & Avoids", tags: [{ tag: "[EDIT]: ", desc: "Hậu kỳ và các yếu tố cần tránh" }] },
+    rndr: { group: "[RNDR] – Render Engine & Quality", tags: [{ tag: "[RNDR]: ", desc: "Công cụ render và chất lượng" }] },
+    sty: { group: "[STY] – Artistic Style & Genre", tags: [{ tag: "[STY]: ", desc: "Phong cách nghệ thuật và thể loại" }] },
+    tim: { group: "[TIM] – Timing / Duration / Transition", tags: [{ tag: "[TIM]: ", desc: "Thời gian và chuyển cảnh" }] },
+    focal: { group: "!FOCAL – Focal Point", tags: [{ tag: "!FOCAL: ", desc: "Điểm lấy nét chính" }] },
   },
   systemInstruction_generateStoryIdea: (style) => `Bạn là một trợ lý sáng tạo. Tạo một ý tưởng câu chuyện ngắn, trong một đoạn văn, phù hợp cho một video ngắn. Câu chuyện nên thú vị và hấp dẫn về mặt hình ảnh. Phong cách hình ảnh mong muốn là "${style}". Giữ ý tưởng ngắn gọn và tập trung. Ngôn ngữ của phản hồi phải giống với ngôn ngữ của prompt của người dùng. QUAN TRỌNG: Bạn phải tuân thủ nghiêm ngặt các chính sách an toàn. Không tạo nội dung khiêu dâm, mô tả bạo lực, quảng bá hành vi bất hợp pháp, liên quan đến trẻ em hoặc các chủ đề nhạy cảm khác.`,
   systemInstruction_generateScript: (config) => `Bạn là một nhà biên kịch. Dựa trên ý tưởng câu chuyện, nhân vật và cấu hình video được cung cấp, hãy viết một kịch bản hoàn chỉnh. Kịch bản phải phù hợp với một video có thời lượng khoảng ${config.duration} giây.
@@ -643,30 +651,38 @@ ${isContinuation ? "5. **Tiếp tục công việc:** Bạn đã tạo một s�
     const imagePromptInstruction = `
 **LOẠI PROMPT: HÌNH ẢNH**
 *   **Mục tiêu:** Mỗi prompt sẽ được dùng để tạo ra một **khung hình (keyframe) chất lượng cao** duy nhất đại diện cho cảnh đó.
-*   **Cấu trúc Prompt:** Chuỗi \`prompt\` PHẢI được xây dựng bằng cách nối các thẻ sau, mỗi thẻ trên một dòng mới. Prompt phải bằng tiếng Anh và tập trung vào các yếu tố hình ảnh tĩnh.
+*   **Cấu trúc Prompt:** Chuỗi \`prompt\` PHẢI là một dòng văn bản liên tục bằng tiếng Anh. Nó PHẢI được tạo bằng cách nối các thẻ sau, phân tách bằng dấu phẩy và dấu cách. KHÔNG sử dụng xuống dòng hoặc biểu tượng.
 
-**CẤU TRÚC PROMPT CHI TIẾT (Mỗi thẻ trên một dòng mới):**
-*   **🎥 [CAM]:** Mô tả góc máy, ống kính, bố cục và chuyển động. Luôn bao gồm tỷ lệ khung hình: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
-*   **👩 [SUBJ]:** Mô tả con người trong cảnh: chủng tộc, giới tính, tuổi tác, vóc dáng, tư thế và biểu cảm.
-*   **💇 [CHAR]:** Mô tả chi tiết ngoại hình nhân vật: tóc, da, trang phục.
-*   **🏠 [SET]:** Mô tả bối cảnh: địa điểm, nền, ánh sáng môi trường và đạo cụ.
-*   **💫 [MOOD]:** Mô tả cảm xúc và không khí của cảnh: chủ đề, tâm trạng, tông màu cảm xúc.
-*   **✨ [FX]:** Mô tả hiệu ứng và cách ánh sáng hoạt động: kiểu ánh sáng chính, hiệu ứng phản quang, độ nhiễu.
-*   **🎨 [CLR]:** Mô tả bảng màu: các màu chủ đạo và cách phối màu.
-*   **🧰 [EDIT]:** Mô tả hậu kỳ và các yếu tố cần tránh.
-*   **🖥️ [RNDR]:** Mô tả chất lượng render.
-*   **🎭 [STY]:** Mô tả phong cách nghệ thuật và thể loại. Luôn bao gồm phong cách chính: **${config.style}**.
-*   **🎯 !FOCAL:** Mô tả điểm lấy nét chính của AI.`;
+**CẤU TRÚC PROMPT CHI TIẾT (Nối bằng ", "):**
+*   **[CAM]:** Mô tả góc máy, ống kính, bố cục. Luôn bao gồm tỷ lệ khung hình: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
+*   **[SUBJ]:** Mô tả con người trong cảnh: chủng tộc, giới tính, tuổi tác, vóc dáng, tư thế và biểu cảm.
+*   **[CHAR]:** Mô tả chi tiết ngoại hình nhân vật: tóc, da, trang phục.
+*   **[SET]:** Mô tả bối cảnh: địa điểm, nền, ánh sáng môi trường và đạo cụ.
+*   **[MOOD]:** Mô tả cảm xúc và không khí của cảnh: chủ đề, tâm trạng, tông màu cảm xúc.
+*   **[FX]:** Mô tả hiệu ứng và cách ánh sáng hoạt động: kiểu ánh sáng chính, hiệu ứng phản quang, độ nhiễu.
+*   **[CLR]:** Mô tả bảng màu: các màu chủ đạo và cách phối màu.
+*   **[EDIT]:** Mô tả hậu kỳ và các yếu tố cần tránh.
+*   **[RNDR]:** Mô tả chất lượng render.
+*   **[STY]:** Mô tả phong cách nghệ thuật và thể loại. Luôn bao gồm phong cách chính: **${config.style}**.
+*   **!FOCAL:** Mô tả điểm lấy nét chính của AI.`;
 
     const videoPromptInstruction = `
 **LOẠI PROMPT: VIDEO**
-*   **Mục tiêu:** Mỗi prompt sẽ được dùng để tạo ra một **video clip ngắn** cho cảnh đó.
-*   **Cấu trúc Prompt:** Đối với trường \`prompt\`, hãy viết một đoạn văn mô tả duy nhất bằng tiếng Anh. Đoạn văn này phải là một mô tả cảnh quay điện ảnh hoàn chỉnh.
-*   **Nội dung:** Prompt phải mô tả sống động:
-    *   **Hành động:** Nhân vật đang làm gì? Chuyện gì đang xảy ra trong cảnh?
-    *   **Chuyển động:** Mô tả hành động của nhân vật (ví dụ: "bước đi chậm rãi", "liếc qua vai") và chuyển động của máy quay (ví dụ: "lia máy chậm sang trái", "máy quay cầm tay linh hoạt theo sau nhân vật", "cú máy cẩu hé lộ thành phố").
-    *   **Không khí:** Bao gồm chi tiết về ánh sáng, thời tiết và tâm trạng để tạo cảm giác điện ảnh, phong phú.
-    *   **Không sử dụng cấu trúc dựa trên thẻ như [CAM], [SUBJ], v.v. cho prompt video.**`;
+*   **Mục tiêu:** Mỗi prompt sẽ được dùng để tạo ra một **video clip ngắn** chất lượng cao cho cảnh đó.
+*   **Cấu trúc Prompt:** Chuỗi \`prompt\` PHẢI là một dòng văn bản liên tục bằng tiếng Anh. Nó PHẢI được tạo bằng cách nối các thẻ sau, phân tách bằng dấu phẩy và dấu cách, và phải mô tả một cảnh quay điện ảnh hoàn chỉnh, **bao gồm cả chuyển động và hành động**. KHÔNG sử dụng xuống dòng hoặc biểu tượng.
+
+**CẤU TRÚC PROMPT CHI TIẾT (Nối bằng ", "):**
+*   **[CAM]:** Mô tả góc máy, ống kính, bố cục và **chuyển động của máy quay (ví dụ: lia máy chậm, dolly vào)**. Luôn bao gồm tỷ lệ khung hình: ${config.framing.includes('9:16') ? '9:16 aspect ratio' : '16:9 aspect ratio'}.
+*   **[SUBJ]:** Mô tả **hành động, tư thế và biểu cảm** của chủ thể con người trong suốt cảnh.
+*   **[CHAR]:** Mô tả chi tiết ngoại hình nhân vật: tóc, da, trang phục.
+*   **[SET]:** Mô tả bối cảnh: địa điểm, nền, ánh sáng môi trường và đạo cụ.
+*   **[MOOD]:** Mô tả cảm xúc và không khí của cảnh: chủ đề, tâm trạng, tông màu cảm xúc.
+*   **[FX]:** Mô tả hiệu ứng và cách ánh sáng hoạt động: kiểu ánh sáng chính, hiệu ứng phản quang, độ nhiễu.
+*   **[CLR]:** Mô tả bảng màu: các màu chủ đạo và cách phối màu.
+*   **[EDIT]:** Mô tả hậu kỳ và các yếu tố cần tránh.
+*   **[RNDR]:** Mô tả chất lượng render.
+*   **[STY]:** Mô tả phong cách nghệ thuật và thể loại. Luôn bao gồm phong cách chính: **${config.style}**.
+*   **!FOCAL:** Mô tả điểm lấy nét chính của cảnh quay và bất kỳ hành động nào liên quan đến nó.`;
 
     return `${commonRules}\n\n${promptType === 'image' ? imagePromptInstruction : videoPromptInstruction}`;
   },

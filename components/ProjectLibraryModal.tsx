@@ -6,6 +6,7 @@ import ArchiveBoxIcon from './icons/ArchiveBoxIcon';
 import TrashIcon from './icons/TrashIcon';
 import ConfirmationModal from './ConfirmationModal';
 import ExclamationTriangleIcon from './icons/ExclamationTriangleIcon';
+import ProfessionalLoader from './ProfessionalLoader';
 
 interface ProjectLibraryModalProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ const ProjectLibraryModal: React.FC<ProjectLibraryModalProps> = ({
           <div className="p-6 flex-grow overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-cyan-400"></div>
+                <ProfessionalLoader size="modal" />
               </div>
             ) : projects.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center text-gray-500">

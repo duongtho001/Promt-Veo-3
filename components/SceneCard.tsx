@@ -9,6 +9,7 @@ import EyeIcon from './icons/EyeIcon';
 import PencilIcon from './icons/PencilIcon';
 import ArrowPathIcon from './icons/ArrowPathIcon';
 import WandIcon from './icons/WandIcon';
+import ProfessionalLoader from './ProfessionalLoader';
 
 
 interface SceneCardProps {
@@ -220,7 +221,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
           <div className="flex-grow w-full bg-gray-900/50 border-2 border-dashed border-gray-700 rounded-lg flex items-center justify-center overflow-hidden min-h-[200px] relative">
             {scene.isGeneratingImage && (
                 <div className="absolute inset-0 flex items-center justify-center gap-x-2 bg-black/50 z-10">
-                    <div className="w-8 h-8 border-2 border-dashed rounded-full animate-spin border-cyan-400"></div>
+                    <ProfessionalLoader size="md" />
                 </div>
             )}
             

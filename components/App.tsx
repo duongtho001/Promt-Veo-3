@@ -1,11 +1,11 @@
+
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from './Header';
 import InputPanel from './InputPanel';
 import SceneTimeline from './SceneTimeline';
-import type { Scene, CharacterProfile, VideoConfig, AIVideoModel, GeneratedImage, ReferenceImage, Project, VideoGenerationResult, CompositeReferenceImage } from '../types';
+import type { Scene, CharacterProfile, VideoConfig, GeneratedImage, ReferenceImage, Project, CompositeReferenceImage } from '../types';
 import { generateScenePrompts, generateCharacterDNA, generateStoryIdea, generateCharacterImage, generateSceneImage, generatePromptSuggestions } from '../services/geminiService';
-import { generateAIVideoImage, testAndFetchModels, createVideo, checkVideoStatus, uploadAIVideoImage } from '../services/aivideoService';
-import { generateWhomeaiImage, editWhomeaiImage } from '../services/whomeaiService';
 import { translations, type Language } from '../translations';
 import GuideModal from './GuideModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -19,6 +19,7 @@ import PromptSuggestionModal from './PromptSuggestionModal';
 import * as dbService from '../services/dbService';
 import { getGeminiKeys } from '../services/apiKeyManager';
 import InformationCircleIcon from './icons/InformationCircleIcon';
+import ProfessionalLoader from './ProfessionalLoader';
 
 
 declare var JSZip: any;
@@ -38,7 +39,13 @@ async function imageUrlToBase64(url: string): Promise<string> {
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error(`Failed to read file as data URL for: ${url}`));
+        }
+      };
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
@@ -112,9 +119,6 @@ const App: React.FC = () => {
     isLoading: boolean;
     suggestions: { imagePrompt: string; videoPrompt: string } | null;
   } | null>(null);
-  const pollingIntervalRef = useRef<number | null>(null);
-  const pollingTimeoutRef = useRef<number | null>(null);
-  const [isUploadingToLibrary, setIsUploadingToLibrary] = useState<boolean>(false);
 
 
   // Generation Progress
@@ -123,29 +127,8 @@ const App: React.FC = () => {
   const [generationStatusMessage, setGenerationStatusMessage] = useState<string>('');
 
   // API Keys & Models
-  const [accessToken, setAccessToken] = useState<string>('');
-  const [whomeaiApiKey, setWhomeaiApiKey] = useState<string>('');
   const [geminiApiKeys, setGeminiApiKeys] = useState<string[]>([]);
-  const [aivideoImageModels, setAivideoImageModels] = useState<AIVideoModel[]>([]);
-  const [aivideoVideoModels, setAivideoVideoModels] = useState<AIVideoModel[]>([]);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState<boolean>(false);
-  const [generatedVideoResult, setGeneratedVideoResult] = useState<VideoGenerationResult | null>(null);
     
-  const fetchModels = (token: string) => {
-    // Fetch image models
-    testAndFetchModels(token, 'image')
-      .then(models => setAivideoImageModels(models))
-      .catch(err => {
-        console.error("Failed to auto-fetch image models with saved token:", err);
-      });
-    // Fetch video models
-    testAndFetchModels(token, 'video')
-        .then(models => setAivideoVideoModels(models))
-        .catch(err => {
-            console.error("Failed to auto-fetch video models with saved token:", err);
-        });
-  };
-
   const loadProjectState = (project: Project) => {
     setCurrentProjectId(project.id);
     setProjectName(project.name);
@@ -161,15 +144,6 @@ const App: React.FC = () => {
     const initApp = async () => {
       setIsLoading(true);
       // Load API keys from localStorage
-      const savedToken = localStorage.getItem('aivideo_access_token');
-      if (savedToken) {
-        setAccessToken(savedToken);
-        fetchModels(savedToken);
-      }
-      const savedWhomeaiKey = localStorage.getItem('whomeai_api_key');
-      if (savedWhomeaiKey) {
-          setWhomeaiApiKey(savedWhomeaiKey);
-      }
       const savedGeminiKeys = getGeminiKeys();
       setGeminiApiKeys(savedGeminiKeys);
 
@@ -231,8 +205,7 @@ const App: React.FC = () => {
         scenes,
         compositeReferenceImages,
         lastModified: Date.now(),
-        // FIX: Add missing 'generatedScript' property to conform to Project type.
-        generatedScript: storyIdea, 
+        generatedScript: storyIdea, // Maintain compatibility with type
       };
       debouncedSave(projectData);
     }
@@ -251,24 +224,6 @@ const App: React.FC = () => {
       setProjectName(t.untitledProject);
     }
   }, [storyIdea, t.untitledProject, currentProjectId]);
-
-  const stopPolling = () => {
-    if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-    }
-    if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-        pollingTimeoutRef.current = null;
-    }
-  }
-
-  useEffect(() => {
-    // Cleanup polling on component unmount
-    return () => {
-        stopPolling();
-    };
-}, []);
 
 
   const resetState = async (projectToLoad: Project | null = null, isInitialLoad = false) => {
@@ -295,7 +250,6 @@ const App: React.FC = () => {
             scenes: [],
             compositeReferenceImages: [],
             lastModified: Date.now(),
-            // FIX: Add missing 'generatedScript' property to conform to Project type.
             generatedScript: '',
         };
         loadProjectState(newProject);
@@ -313,9 +267,6 @@ const App: React.FC = () => {
     setIsGenerationComplete(false);
     setGenerationProgress({ current: 0, total: 0 });
     setGenerationStatusMessage('');
-    setIsGeneratingVideo(false);
-    setGeneratedVideoResult(null);
-    stopPolling();
 };
 
   const handleNewProjectRequest = () => {
@@ -388,7 +339,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setIsGenerationComplete(false);
-    setScenes([]); 
+    setScenes([]); // Start fresh when generating prompts
 
     const totalScenes = Math.round((videoConfig.duration * 60) / 8);
     if (totalScenes <= 0) {
@@ -396,7 +347,7 @@ const App: React.FC = () => {
         setIsLoading(false);
         return;
     }
-    
+
     setGenerationProgress({ current: 0, total: totalScenes });
     setGenerationStatusMessage(t.generationStatusAnalyzing);
     await new Promise(resolve => setTimeout(resolve, 1500)); 
@@ -493,28 +444,6 @@ const App: React.FC = () => {
       setIsCharacterLoading(false);
     }
   };
-
-  const getAIVideoRatioFromFraming = (framing: string): '16_9' | '1_1' | '9_16' => {
-    const lowerFraming = framing.toLowerCase();
-    if (lowerFraming.includes('16:9') || lowerFraming.includes('2.39:1') || lowerFraming.includes('4:3')) {
-      return '16_9';
-    }
-    if (lowerFraming.includes('9:16')) {
-      return '9_16';
-    }
-    if (lowerFraming.includes('1:1')) {
-      return '1_1';
-    }
-    return '16_9';
-  };
-
-  const getWhomeaiSizeFromFraming = (framing: string): '1792x1024' | '1024x1792' => {
-    const lowerFraming = framing.toLowerCase();
-    if (lowerFraming.includes('9:16') || lowerFraming.includes('1:1')) { // Default square to portrait
-        return '1024x1792';
-    }
-    return '1792x1024'; // Default landscape
-  };
   
   const addImageToLibrary = (image: ReferenceImage) => {
     setReferenceLibrary(prev => {
@@ -527,27 +456,15 @@ const App: React.FC = () => {
 
   const handleGenerateCharacterImage = async (characterId: string) => {
     const character = characters.find(c => c.id === characterId);
-    if (!character || !videoConfig.imageModel) return;
+    if (!character) return;
 
     setCharacters(prev => prev.map(c => c.id === characterId ? { ...c, isGeneratingImage: true } : c));
     setError(null);
 
     try {
-        let imageInfo: ReferenceImage;
-        if (videoConfig.imageService === 'aivideoauto') {
-            const promptForAIVideo = `A full-body reference portrait of a character, neutral pose, simple background. **Visual Style: ${videoConfig.style}**. **Character DNA:** ${character.description}`;
-            imageInfo = await generateAIVideoImage(accessToken, videoConfig.imageModel, promptForAIVideo, '1_1');
-        } else if (videoConfig.imageService === 'whomeai') {
-            if (!whomeaiApiKey) throw new Error("WhomeAI API Key is not set in Settings.");
-            const size = getWhomeaiSizeFromFraming(videoConfig.framing);
-            const imageType = size === '1024x1792' ? 'portrait' : 'shot';
-            const prompt = `A full-body, cinematic ${imageType} of the following character in the visual style of "${videoConfig.style}". The background should be simple and neutral. Character details: ${character.description}`;
-            const base64Image = await generateWhomeaiImage(whomeaiApiKey, prompt, size);
-            imageInfo = { url: base64Image, id_base: `whomeai_${crypto.randomUUID()}` };
-        } else {
-            const base64Image = await generateCharacterImage(character.description, videoConfig.style, 'Square (1:1)');
-            imageInfo = { url: base64Image, id_base: `google_${crypto.randomUUID()}` };
-        }
+        const base64Image = await generateCharacterImage(character.description, videoConfig.style, videoConfig.framing);
+        const imageInfo: ReferenceImage = { url: base64Image, id_base: `google_${crypto.randomUUID()}` };
+        
         setCharacters(prev => prev.map(c => c.id === characterId ? { ...c, referenceImage: imageInfo, isGeneratingImage: false } : c));
         addImageToLibrary(imageInfo);
     } catch (err) {
@@ -558,10 +475,6 @@ const App: React.FC = () => {
   };
 
   const handleGenerateAllCharacterImages = async () => {
-    if (!videoConfig.imageModel) {
-      setError("Please select an image generation model first.");
-      return;
-    }
     setIsBatchCharacterImageLoading(true);
     setError(null);
 
@@ -581,48 +494,18 @@ const App: React.FC = () => {
       )
     );
 
-    // Generate all images sequentially, one by one, for all services.
     for (const character of charactersToGenerate) {
       try {
-        let imageInfo: ReferenceImage;
+        const base64Image = await generateCharacterImage(
+          character.description,
+          videoConfig.style,
+          videoConfig.framing
+        );
+        const imageInfo: ReferenceImage = {
+          url: base64Image,
+          id_base: `google_${crypto.randomUUID()}`,
+        };
 
-        if (videoConfig.imageService === "aivideoauto") {
-          const promptForAIVideo = `A full-body reference portrait of a character, neutral pose, simple background. **Visual Style: ${videoConfig.style}**. **Character DNA:** ${character.description}`;
-          imageInfo = await generateAIVideoImage(
-            accessToken,
-            videoConfig.imageModel,
-            promptForAIVideo,
-            "1_1"
-          );
-        } else if (videoConfig.imageService === "whomeai") {
-          if (!whomeaiApiKey)
-            throw new Error("WhomeAI API Key is not set in Settings.");
-          const size = getWhomeaiSizeFromFraming(videoConfig.framing);
-          const imageType = size === "1024x1792" ? "portrait" : "shot";
-          const prompt = `A full-body, cinematic ${imageType} of the following character in the visual style of "${videoConfig.style}". The background should be simple and neutral. Character details: ${character.description}`;
-          const base64Image = await generateWhomeaiImage(
-            whomeaiApiKey,
-            prompt,
-            size
-          );
-          imageInfo = {
-            url: base64Image,
-            id_base: `whomeai_${crypto.randomUUID()}`,
-          };
-        } else {
-          // Google Gemini
-          const base64Image = await generateCharacterImage(
-            character.description,
-            videoConfig.style,
-            "Square (1:1)"
-          );
-          imageInfo = {
-            url: base64Image,
-            id_base: `google_${crypto.randomUUID()}`,
-          };
-        }
-
-        // Update state after each successful generation
         setCharacters((prev) =>
           prev.map((c) =>
             c.id === character.id
@@ -632,7 +515,6 @@ const App: React.FC = () => {
         );
         addImageToLibrary(imageInfo);
 
-        // Wait for 2 seconds before processing the next character, if it's not the last one.
         if (charactersToGenerate.indexOf(character) < charactersToGenerate.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
@@ -641,13 +523,11 @@ const App: React.FC = () => {
           err instanceof Error ? err.message : "Unknown error"
         }`;
         setError(errorMessage);
-        // Update state for the failed character
         setCharacters((prev) =>
           prev.map((c) =>
             c.id === character.id ? { ...c, isGeneratingImage: false } : c
           )
         );
-        // Stop the batch process on the first error
         break;
       }
     }
@@ -658,34 +538,22 @@ const App: React.FC = () => {
   const handleGenerateCompositeImage = async () => {
     const charactersWithImages = characters.filter(c => c.referenceImage);
     if (charactersWithImages.length < 2) return;
-    if (videoConfig.imageService === 'whomeai') {
-        setError(t.whomeaiGroupReferenceNotSupportedTooltip);
-        return;
-    }
 
     setIsGeneratingComposite(true);
     setError(null);
     try {
-        let newBase64: string;
         const groupShotPrompt = `Create a single group shot featuring all of the characters from the provided reference images, standing together on a plain white background. The style should be consistent across all characters and match the project's visual style: ${videoConfig.style}`;
 
-        if (videoConfig.imageService === 'aivideoauto') {
-            const referenceImagesForApi = charactersWithImages.map(c => c.referenceImage!);
-            const imageInfo = await generateAIVideoImage(accessToken, videoConfig.imageModel, groupShotPrompt, '16_9', referenceImagesForApi);
-            // We need to convert the returned URL to base64 to store it consistently
-            newBase64 = await imageUrlToBase64(imageInfo.url);
-        } else { // Default to Google Gemini
-            const refUrls = charactersWithImages.map(c => c.referenceImage!.url);
-            // FIX: Explicitly type the array of promises to ensure correct type inference by Promise.all, resolving the 'unknown[]' error.
-            const imagePromises: Promise<string>[] = refUrls.map(url => imageUrlToBase64(url));
-            const refBase64s = await Promise.all(imagePromises);
-            newBase64 = await generateSceneImage(groupShotPrompt, refBase64s, videoConfig.framing);
-        }
+        const refUrls = charactersWithImages.map(c => c.referenceImage!.url);
+        // FIX: Explicitly type the promises array to ensure TypeScript correctly infers the resolved type from Promise.all.
+        const imagePromises: Promise<string>[] = refUrls.map(url => imageUrlToBase64(url));
+        const refBase64s: string[] = await Promise.all(imagePromises);
+        const newBase64 = await generateSceneImage(groupShotPrompt, refBase64s, videoConfig.framing);
         
         const newComposite: CompositeReferenceImage = {
             id: crypto.randomUUID(),
             url: newBase64,
-            id_base: `composite_${videoConfig.imageService}_${crypto.randomUUID()}`,
+            id_base: `composite_google_${crypto.randomUUID()}`,
             characterIds: charactersWithImages.map(c => c.id),
         };
         setCompositeReferenceImages(prev => [...prev, newComposite]);
@@ -703,7 +571,7 @@ const App: React.FC = () => {
   
   const handleGenerateSceneImage = async (sceneId: number, imageRefIds: string[], overridePrompt?: string, editedFromId?: string) => {
     const scene = scenes.find(s => s.scene_id === sceneId);
-    if (!scene || !videoConfig.imageModel) return;
+    if (!scene) return;
   
     setScenes(prev => prev.map(s => s.scene_id === sceneId ? { ...s, isGeneratingImage: true } : s));
     setError(null);
@@ -716,7 +584,6 @@ const App: React.FC = () => {
       
       let allReferences: ReferenceImage[] = [];
 
-      // Logic to find and use a matching composite image
       const matchingComposite = compositeReferenceImages.find(comp => {
           const compositeCharIds = new Set(comp.characterIds);
           return compositeCharIds.size === sceneCharacterIds.size && 
@@ -726,7 +593,6 @@ const App: React.FC = () => {
       if (matchingComposite) {
           allReferences = [matchingComposite];
       } else {
-          // Fallback to individual character references
           const characterReferences = characters
             .filter(c => characterIds.includes(c.id) && c.referenceImage)
             .map(c => c.referenceImage!);
@@ -737,31 +603,12 @@ const App: React.FC = () => {
           allReferences = [...characterReferences, ...imageVariationReferences];
       }
 
-      let imageInfo: ReferenceImage;
-      if (videoConfig.imageService === 'aivideoauto') {
-        const ratio = getAIVideoRatioFromFraming(videoConfig.framing);
-        imageInfo = await generateAIVideoImage(accessToken, videoConfig.imageModel, promptToUse, ratio, allReferences);
-      } else if (videoConfig.imageService === 'whomeai') {
-        if (!whomeaiApiKey) throw new Error("WhomeAI API Key is not set in Settings.");
-        const size = getWhomeaiSizeFromFraming(videoConfig.framing);
-        
-        const primaryReference = allReferences.length > 0 ? allReferences[0] : null;
-
-        if (primaryReference) {
-            const refBase64s = [await imageUrlToBase64(primaryReference.url)];
-            const promptForEdit = `Using the provided reference for character consistency. Scene: ${promptToUse}`;
-            imageInfo = { url: await editWhomeaiImage(whomeaiApiKey, promptForEdit, refBase64s, size), id_base: `whomeai_${crypto.randomUUID()}` };
-        } else {
-            imageInfo = { url: await generateWhomeaiImage(whomeaiApiKey, promptToUse, size), id_base: `whomeai_${crypto.randomUUID()}` };
-        }
-      } else {
-         const refUrls = allReferences.map(ref => ref.url);
-         // FIX: Explicitly type the array of promises to ensure correct type inference by Promise.all, resolving the 'unknown[]' error.
-         const imagePromises: Promise<string>[] = refUrls.map(url => imageUrlToBase64(url));
-         const refBase64s = await Promise.all(imagePromises);
-         const newBase64 = await generateSceneImage(promptToUse, refBase64s, videoConfig.framing);
-         imageInfo = { url: newBase64, id_base: `google_${crypto.randomUUID()}` };
-      }
+      const refUrls = allReferences.map(ref => ref.url);
+      // FIX: Explicitly type the promises array to ensure correct type inference for Promise.all.
+      const imagePromises: Promise<string>[] = refUrls.map(url => imageUrlToBase64(url));
+      const refBase64s: string[] = await Promise.all(imagePromises);
+      const newBase64 = await generateSceneImage(promptToUse, refBase64s, videoConfig.framing);
+      const imageInfo: ReferenceImage = { url: newBase64, id_base: `google_${crypto.randomUUID()}` };
 
       const newImage: GeneratedImage = {
         ...imageInfo,
@@ -808,10 +655,6 @@ const App: React.FC = () => {
   };
 
   const handleGenerateAllSceneImages = async () => {
-    if (!videoConfig.imageModel) {
-      setError("Please select an image generation model first.");
-      return;
-    }
     setIsBatchGenerating(true);
     setError(null);
 
@@ -830,7 +673,6 @@ const App: React.FC = () => {
         )
       );
       try {
-        // We reuse the single-generation logic which now contains the composite check
         await handleGenerateSceneImage(scene.scene_id, []);
         
         if (scenesToGenerate.indexOf(scene) < scenesToGenerate.length - 1) {
@@ -854,75 +696,6 @@ const App: React.FC = () => {
 
     setIsBatchGenerating(false);
   };
-
-  const startVideoStatusPolling = (videoId: string) => {
-    stopPolling(); // Clear any existing timers
-
-    pollingTimeoutRef.current = window.setTimeout(() => {
-        stopPolling();
-        setGeneratedVideoResult(prev => prev ? {...prev, status: 'TIMEOUT'} : { id_base: videoId, status: 'TIMEOUT'});
-        setError("Video generation timed out after 10 minutes.");
-        setIsGeneratingVideo(false);
-    }, 10 * 60 * 1000); // 10 minute timeout
-
-    pollingIntervalRef.current = window.setInterval(async () => {
-        try {
-            const result = await checkVideoStatus(accessToken, videoId);
-            setGeneratedVideoResult(result);
-
-            const processingStatuses = [
-                'MEDIA_GENERATION_STATUS_PENDING',
-                'MEDIA_GENERATION_STATUS_ACTIVE',
-                'MEDIA_GENERATION_STATUS_PROCESSING'
-            ];
-            
-            if (result.status === 'MEDIA_GENERATION_STATUS_SUCCESSFUL') {
-                if (result.download_url) {
-                    stopPolling();
-                    setIsGeneratingVideo(false);
-                }
-                // If successful but no URL, keep polling
-            } else if (!processingStatuses.includes(result.status)) {
-                // Any other status is an error or failed state
-                stopPolling();
-                setError(t.videoStatus[result.status] || `Video generation failed with status: ${result.status}`);
-                setIsGeneratingVideo(false);
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Error polling video status.');
-            stopPolling();
-            setIsGeneratingVideo(false);
-        }
-    }, 10000); // Poll every 10 seconds
-  };
-
-  const handleGenerateVideo = async () => {
-    if (!videoConfig.videoModel) {
-        setError("Please select a video model.");
-        return;
-    }
-
-    setIsGeneratingVideo(true);
-    setError(null);
-    setGeneratedVideoResult(null);
-
-    const firstImage = scenes.flatMap(s => s.generatedImages || []).find(img => img.url);
-
-    try {
-        const result = await createVideo(
-            accessToken,
-            videoConfig.videoModel,
-            storyIdea, // Using the full script as the main prompt
-            firstImage ? [{ id_base: firstImage.id_base, url: firstImage.url }] : []
-        );
-        setGeneratedVideoResult(result);
-        startVideoStatusPolling(result.id_base);
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to start video generation.');
-        setIsGeneratingVideo(false);
-    }
-  };
-
 
   const handleDownloadAllImages = async () => {
     const scenesWithImages = scenes.filter(s => s.generatedImages && s.generatedImages.length > 0);
@@ -966,8 +739,8 @@ const App: React.FC = () => {
   const handleDownload = () => {
     if (scenes.length === 0) return;
     const sortedScenes = [...scenes].sort((a, b) => a.scene_id - b.scene_id);
-    const content = sortedScenes.map(s => {
-      return s.prompt.replace(/^Scene \d+ –\s*/, `${s.scene_id}. `);
+    const content = sortedScenes.map((s, index) => {
+      return `${index + 1}. ${s.prompt}`;
     }).join('\n\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
@@ -976,23 +749,6 @@ const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-  
-  const handleUploadToLibrary = async (file: File) => {
-    if (!accessToken) {
-        setError("AIVideoAuto Access Token is not set.");
-        return;
-    }
-    setIsUploadingToLibrary(true);
-    setError(null);
-    try {
-        const imageInfo = await uploadAIVideoImage(accessToken, file);
-        addImageToLibrary(imageInfo);
-    } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to upload image.");
-    } finally {
-        setIsUploadingToLibrary(false);
-    }
   };
   
   const handleDeleteFromLibrary = (id: string) => {
@@ -1030,8 +786,7 @@ const App: React.FC = () => {
   if (isLoading && !projectToResume) {
     return (
         <div className="bg-[#0D0D0F] min-h-screen flex items-center justify-center">
-            {/* You can add a more sophisticated loading spinner here */}
-            <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-[#5BEAFF]"></div>
+            <ProfessionalLoader size="lg" />
         </div>
     );
   }
@@ -1063,9 +818,7 @@ const App: React.FC = () => {
         isOpen={isLibraryVisible}
         onClose={() => setIsLibraryVisible(false)}
         library={referenceLibrary}
-        onUpload={handleUploadToLibrary}
         onDelete={handleDeleteFromLibrary}
-        isUploading={isUploadingToLibrary}
         t={t}
       />
       <ProjectLibraryModal
@@ -1080,16 +833,8 @@ const App: React.FC = () => {
       <SettingsPanel
         isOpen={isSettingsVisible}
         onClose={() => setIsSettingsVisible(false)}
-        accessToken={accessToken}
-        setAccessToken={setAccessToken}
-        whomeaiApiKey={whomeaiApiKey}
-        setWhomeaiApiKey={setWhomeaiApiKey}
         geminiApiKeys={geminiApiKeys}
         setGeminiApiKeys={setGeminiApiKeys}
-        onModelsFetched={(type, models) => {
-            if (type === 'image') setAivideoImageModels(models);
-            if (type === 'video') setAivideoVideoModels(models);
-        }}
         t={t}
       />
       <ConfirmationModal
@@ -1163,7 +908,6 @@ const App: React.FC = () => {
             isBatchCharacterImageLoading={isBatchCharacterImageLoading}
             t={t}
             language={language}
-            aivideoImageModels={aivideoImageModels}
           />
           <SceneTimeline
             scenes={scenes}
@@ -1191,12 +935,6 @@ const App: React.FC = () => {
             onEditSceneImage={(scene, image) => setEditModalState({ scene, imageRef: image })}
             onViewImage={setViewingImageUrl}
             onSuggestPrompts={handleSuggestPrompts}
-            videoConfig={videoConfig}
-            onVideoConfigChange={(key, value) => setVideoConfig(prev => ({ ...prev, [key]: value }))}
-            onGenerateVideo={handleGenerateVideo}
-            isGeneratingVideo={isGeneratingVideo}
-            generatedVideoResult={generatedVideoResult}
-            aivideoVideoModels={aivideoVideoModels}
             t={t}
             language={language}
           />

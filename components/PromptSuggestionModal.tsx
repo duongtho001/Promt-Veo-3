@@ -1,6 +1,7 @@
 import React from 'react';
 import type { TranslationKeys } from '../translations';
 import WandIcon from './icons/WandIcon';
+import ProfessionalLoader from './ProfessionalLoader';
 
 interface PromptSuggestionModalProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ const PromptSuggestionModal: React.FC<PromptSuggestionModalProps> = ({
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           {isLoading && (
             <div className="flex flex-col items-center justify-center space-y-3 p-8">
-              <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-cyan-400"></div>
+              <ProfessionalLoader size="modal" />
               <p className="text-cyan-300">{t.generatingSuggestions}</p>
             </div>
           )}

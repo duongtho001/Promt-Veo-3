@@ -13,6 +13,21 @@
       body {
         font-family: 'Inter', sans-serif;
       }
+      /* Animation for the professional loader component */
+      @keyframes scale-y-pulse {
+        0%, 100% {
+          transform: scaleY(1.0);
+          opacity: 1;
+        }
+        50% {
+          transform: scaleY(0.4);
+          opacity: 0.8;
+        }
+      }
+      .animate-scale-y-pulse {
+        animation: scale-y-pulse 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        transform-origin: bottom;
+      }
     </style>
   <script type="importmap">
 {

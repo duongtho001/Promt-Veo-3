@@ -1,7 +1,30 @@
+
 import { GoogleGenAI, GenerateContentResponse, Part, Modality } from "@google/genai";
 import { getCurrentGeminiKey, rotateToNextGeminiKey, getGeminiKeys } from './apiKeyManager.ts';
 import type { CharacterProfile, Scene, VideoConfig } from '../types.ts';
 import { translations, type Language } from "../translations.ts";
+
+/**
+ * Extracts a numerical aspect ratio (e.g., "16:9") from a descriptive framing string.
+ * @param framing The descriptive framing string (e.g., "Standard Cinematic (16:9)").
+ * @returns The numerical aspect ratio string.
+ */
+const extractAspectRatio = (framing: string): string => {
+  const match = framing.match(/(\d+:\d+)/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  // Fallback for square or other formats
+  if (framing.toLowerCase().includes('square') || framing.includes('1:1')) {
+    return '1:1';
+  }
+  if (framing.toLowerCase().includes('vertical') || framing.includes('9:16')) {
+    return '9:16';
+  }
+  // Default to landscape
+  return '16:9';
+};
+
 
 /**
  * Parses the complex Gemini API error object to provide a user-friendly message.
@@ -227,7 +250,8 @@ export const generateCharacterImage = async (
   style: string,
   framing: string
 ): Promise<string> => {
-  const prompt = `A full-body reference portrait of a character, neutral pose, simple background. **Visual Style: ${style}**. **Character DNA:** ${description}`;
+  const aspectRatio = extractAspectRatio(framing);
+  const prompt = `A full-body reference portrait of a character, neutral pose, plain white background. **Aspect Ratio: ${aspectRatio}**. **Visual Style: ${style}**. **Character DNA:** ${description}`;
   
   const response = await callGeminiApi({
     model: 'gemini-2.5-flash-image',

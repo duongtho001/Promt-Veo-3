@@ -21,33 +21,51 @@ const Loader: React.FC<LoaderProps> = ({ t, progress, isComplete, statusMessage 
 
   if (progress && progress.total > 0) {
     const percentage = Math.round((progress.current / progress.total) * 100);
+    const radius = 56; // SVG circle radius
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+
     return (
-      <div className="w-full max-w-md mx-auto space-y-3">
+      <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center space-y-4 py-4">
+        <div className="relative inline-flex items-center justify-center">
+          <svg className="w-40 h-40">
+            {/* Background Circle */}
+            <circle
+              className="text-gray-700/50"
+              strokeWidth="10"
+              stroke="currentColor"
+              fill="transparent"
+              r={radius}
+              cx="80"
+              cy="80"
+            />
+            {/* Progress Circle */}
+            <circle
+              className="text-[#5BEAFF]"
+              strokeWidth="10"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              stroke="currentColor"
+              fill="transparent"
+              r={radius}
+              cx="80"
+              cy="80"
+              transform="rotate(-90 80 80)"
+              style={{ transition: 'stroke-dashoffset 0.35s linear' }}
+            />
+          </svg>
+          <span className="absolute text-4xl font-bold text-cyan-300 font-mono tracking-tighter">{`${percentage}%`}</span>
+        </div>
+        
         {statusMessage && (
-          <p className="text-center text-cyan-300 text-sm font-medium animate-pulse">
+          <p className="text-center text-cyan-300 text-lg font-medium animate-pulse h-7">
             {statusMessage}
           </p>
         )}
-        <div className="relative pt-1">
-          <div className="flex mb-2 items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-cyan-200 bg-cyan-800/50">
-                {t.generatingScene(progress.current, progress.total)}
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-xs font-semibold inline-block text-cyan-400">
-                {percentage}%
-              </span>
-            </div>
-          </div>
-          <div className="overflow-hidden h-3 mb-4 text-xs flex rounded bg-cyan-900/50 border border-cyan-800">
-            <div
-              style={{ width: `${percentage}%` }}
-              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-cyan-500 to-[#5BEAFF] transition-all duration-300"
-            ></div>
-          </div>
-        </div>
+        <span className="text-md font-semibold inline-block text-cyan-400 h-6">
+          {t.generatingScene(progress.current, progress.total)}
+        </span>
       </div>
     );
   }

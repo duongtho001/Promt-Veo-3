@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef } from 'react';
 import type { CharacterProfile, VideoConfig, CompositeReferenceImage } from '../types';
 import type { TranslationKeys, Language } from '../translations';
@@ -11,6 +13,7 @@ import PhotoGroupIcon from './icons/PhotoGroupIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import UploadIcon from './icons/UploadIcon';
 import VideoCameraIcon from './icons/VideoCameraIcon';
+import ProfessionalLoader from './ProfessionalLoader';
 
 interface InputPanelProps {
   characters: CharacterProfile[];
@@ -92,6 +95,17 @@ const InputPanel: React.FC<InputPanelProps> = ({
     link.click();
     document.body.removeChild(link);
   };
+  
+  const handleDownloadCharacterImage = (url: string, characterId: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    const character = characters.find(c => c.id === characterId);
+    const name = character?.name.replace(/\s/g, '_') || characterId.substring(0, 8);
+    link.download = `character_${name}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -164,12 +178,23 @@ const InputPanel: React.FC<InputPanelProps> = ({
                     className="w-full bg-gray-900/50 text-gray-200 p-2 rounded-md border border-gray-600 focus:ring-1 focus:ring-[#5BEAFF] focus:border-[#5BEAFF] transition text-sm"
                   />
                 </div>
-                <div className="flex-shrink-0 w-40 space-y-2 flex flex-col items-center">
+                <div className="flex-shrink-0 w-48 space-y-2 flex flex-col items-center">
                     <label className="text-xs text-gray-400">{t.characterImageLabel}</label>
-                    <div className="w-full h-32 bg-gray-900/50 rounded-md flex items-center justify-center border-2 border-dashed border-gray-600 overflow-hidden relative">
-                       {char.isGeneratingImage && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><div className="w-8 h-8 border-2 border-dashed rounded-full animate-spin border-cyan-400"></div></div>}
+                    <div className="w-full h-40 bg-gray-900/50 rounded-md flex items-center justify-center border-2 border-dashed border-gray-600 overflow-hidden relative group">
+                       {char.isGeneratingImage && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><ProfessionalLoader size="md" /></div>}
                         {char.referenceImage ? (
-                            <img src={char.referenceImage.url} alt={char.name} className="w-full h-full object-cover" />
+                            <>
+                              <img src={char.referenceImage.url} alt={char.name} className="w-full h-full object-contain" />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <button 
+                                      onClick={() => handleDownloadCharacterImage(char.referenceImage!.url, char.id)}
+                                      title={t.downloadCharacterImageButton}
+                                      className="p-2 rounded-full text-white bg-cyan-600 hover:bg-cyan-700 transition-colors"
+                                  >
+                                      <DownloadIcon className="w-5 h-5"/>
+                                  </button>
+                              </div>
+                            </>
                         ) : (
                             <p className="text-gray-600 text-xs text-center p-2">{t.noImageGenerated}</p>
                         )}
@@ -222,7 +247,7 @@ const InputPanel: React.FC<InputPanelProps> = ({
         <div className="p-3 bg-[#0D0D0F] rounded-lg border border-gray-700 min-h-[80px] flex flex-wrap gap-3 items-center">
             {isGeneratingComposite && (
                 <div className="w-16 h-16 bg-gray-900/50 rounded-md flex items-center justify-center border-2 border-dashed border-cyan-700 animate-pulse">
-                     <div className="w-6 h-6 border-2 border-dashed rounded-full animate-spin border-cyan-400"></div>
+                     <ProfessionalLoader size="sm" />
                 </div>
             )}
             {compositeReferenceImages.length === 0 && !isGeneratingComposite ? (
@@ -296,67 +321,68 @@ const InputPanel: React.FC<InputPanelProps> = ({
       {/* Video Settings */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-gray-100">{t.videoSettingsLabel}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[#0D0D0F] border border-gray-700 rounded-lg">
-          
-           <div className="space-y-2">
-             <h3 className="font-semibold text-gray-400 text-sm">{t.videoGenerationSettingsLabel}</h3>
-            <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 p-4 bg-[#0D0D0F] border border-gray-700 rounded-lg">
+          <div className="space-y-2">
+            <h3 className="font-semibold text-gray-400 text-sm">{t.videoGenerationSettingsLabel}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 <label htmlFor="duration" className="block text-xs font-medium text-gray-500">{t.durationLabel}</label>
                 <input
-                    id="duration"
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
-                    placeholder={t.durationPlaceholder}
-                    value={videoConfig.duration || ''}
-                    onChange={(e) => setVideoConfig('duration', parseFloat(e.target.value))}
+                  id="duration"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
+                  placeholder={t.durationPlaceholder}
+                  value={videoConfig.duration || ''}
+                  onChange={(e) => setVideoConfig('duration', parseFloat(e.target.value))}
                 />
-            </div>
-             <div className="space-y-2">
+              </div>
+              <div className="space-y-2">
                 <label htmlFor="style" className="block text-xs font-medium text-gray-500">{t.styleLabel}</label>
-                 <select
-                    id="style"
-                    className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
-                    value={videoConfig.style}
-                    onChange={(e) => setVideoConfig('style', e.target.value)}
+                <select
+                  id="style"
+                  className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
+                  value={videoConfig.style}
+                  onChange={(e) => setVideoConfig('style', e.target.value)}
                 >
-                    {VIDEO_STYLES.map(s => <option key={s.key} value={s.key}>{s[language]}</option>)}
+                  {VIDEO_STYLES.map(s => <option key={s.key} value={s.key}>{s[language]}</option>)}
                 </select>
-            </div>
-             <div className="space-y-2">
+              </div>
+              <div className="space-y-2">
                 <label htmlFor="framing" className="block text-xs font-medium text-gray-500">{t.framingLabel}</label>
-                 <select
-                    id="framing"
-                    className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
-                    value={videoConfig.framing}
-                    onChange={(e) => setVideoConfig('framing', e.target.value)}
+                <select
+                  id="framing"
+                  className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
+                  value={videoConfig.framing}
+                  onChange={(e) => setVideoConfig('framing', e.target.value)}
                 >
-                    {FRAMING_STYLES.map(s => <option key={s.key} value={s.en}>{s[language]}</option>)}
+                  {FRAMING_STYLES.map(s => <option key={s.key} value={s.en}>{s[language]}</option>)}
                 </select>
+              </div>
             </div>
           </div>
           <div className="space-y-2">
-             <h3 className="font-semibold text-gray-400 text-sm">{t.dialogueSettingsLabel}</h3>
-             <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-500">{t.dialogueSettingsLabel}</label>
-                <div className="flex gap-x-2">
-                    <button onClick={() => setVideoConfig('includeDialogue', false)} className={`flex-1 p-2 rounded-md text-sm transition ${!videoConfig.includeDialogue ? 'bg-cyan-800/70 text-cyan-200 border-cyan-700' : 'bg-gray-800/50 text-gray-400 border-gray-600'} border`}>{t.dialogueOffLabel}</button>
-                    <button onClick={() => setVideoConfig('includeDialogue', true)} className={`flex-1 p-2 rounded-md text-sm transition ${videoConfig.includeDialogue ? 'bg-cyan-800/70 text-cyan-200 border-cyan-700' : 'bg-gray-800/50 text-gray-400 border-gray-600'} border`}>{t.dialogueOnLabel}</button>
-                </div>
+            <h3 className="font-semibold text-gray-400 text-sm">{t.dialogueSettingsLabel}</h3>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-500">{t.dialogueSettingsLabel}</label>
+              <div className="flex gap-x-2">
+                <button onClick={() => setVideoConfig('includeDialogue', false)} className={`flex-1 p-2 rounded-md text-sm transition ${!videoConfig.includeDialogue ? 'bg-cyan-800/70 text-cyan-200 border-cyan-700' : 'bg-gray-800/50 text-gray-400 border-gray-600'} border`}>{t.dialogueOffLabel}</button>
+                <button onClick={() => setVideoConfig('includeDialogue', true)} className={`flex-1 p-2 rounded-md text-sm transition ${videoConfig.includeDialogue ? 'bg-cyan-800/70 text-cyan-200 border-cyan-700' : 'bg-gray-800/50 text-gray-400 border-gray-600'} border`}>{t.dialogueOnLabel}</button>
+              </div>
             </div>
             {videoConfig.includeDialogue && (
-                 <div className="space-y-2">
-                    <label htmlFor="dialogue-lang" className="block text-xs font-medium text-gray-500">{t.dialogueLanguageLabel}</label>
-                     <select
-                        id="dialogue-lang"
-                        className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
-                        value={videoConfig.dialogueLanguage}
-                        onChange={(e) => setVideoConfig('dialogueLanguage', e.target.value)}
-                    >
-                        {DIALOGUE_LANGUAGES.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
-                    </select>
-                </div>
+              <div className="space-y-2">
+                <label htmlFor="dialogue-lang" className="block text-xs font-medium text-gray-500">{t.dialogueLanguageLabel}</label>
+                <select
+                  id="dialogue-lang"
+                  className="w-full bg-gray-900/50 text-gray-300 p-2 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5BEAFF] transition"
+                  value={videoConfig.dialogueLanguage}
+                  onChange={(e) => setVideoConfig('dialogueLanguage', e.target.value)}
+                >
+                  {DIALOGUE_LANGUAGES.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
+                </select>
+              </div>
             )}
           </div>
         </div>
